@@ -6,7 +6,7 @@ behind it) is unreachable and Cloudflare would otherwise show its default
 
 | File            | Purpose                                                              |
 | --------------- | ------------------------------------------------------------------- |
-| `index.html`    | The page. Fully self-contained — logo inlined as a data URI, no external requests, ~52 KB. Light/dark aware. Auto-polls `/` every 20s and reloads when the origin recovers. |
+| `index.html`    | The page. Fully self-contained — logo inlined as a data URI, no external requests, ~59 KB. Light/dark aware. Shows a GitHub-status-style recovery tracker (Investigating → Identified → Recovering → Resolved) with a live indicator and indeterminate progress bar. No "retry" button — it polls `/` every 20s on its own, animates the tracker to *Resolved*, and reloads the moment the origin recovers. |
 | `worker.js`     | Cloudflare Worker that detects an unreachable origin and serves `index.html`. For Free/Pro/Business plans. |
 | `wrangler.toml` | Deploy config for the Worker. |
 
@@ -137,3 +137,5 @@ The failover page is the safety net, not the fix.
 - **2026-08-27** — Built. `index.html` content (logo, contacts, wording) mirrors
   the `siclife-ui` self-service portal at that date. Committed to `main`
   (`d3e0955`). Not yet deployed to Cloudflare — handed over for manual wiring.
+- **2026-08-27** — Added the GitHub-status-style recovery tracker + animations,
+  dropped the "Try again" button (the auto-poll already covers it).

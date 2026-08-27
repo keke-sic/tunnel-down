@@ -27,6 +27,13 @@
     --chip-bg: #eaf5ee;
     --chip-text: #0a5c30;
     --shadow: 0 20px 55px rgba(10, 45, 26, .12);
+    --warn: #b76e00;
+    --warn-bg: #fbf1e0;
+    --warn-border: #f0dcbf;
+    --track: #dcebe1;
+    --node-idle: #b9cdc0;
+    --live-ring: rgba(183, 110, 0, .45);
+    --ok-ring: rgba(13, 125, 63, .40);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -45,6 +52,13 @@
       --chip-bg: #123626;
       --chip-text: #8be8a6;
       --shadow: 0 24px 60px rgba(0, 0, 0, .45);
+      --warn: #f0b155;
+      --warn-bg: #2a2012;
+      --warn-border: #47371d;
+      --track: #1a4230;
+      --node-idle: #3a5c49;
+      --live-ring: rgba(240, 177, 85, .40);
+      --ok-ring: rgba(42, 184, 104, .40);
     }
   }
 
@@ -108,34 +122,168 @@
     letter-spacing: -.01em;
     color: var(--heading);
   }
-  .lead { margin: 0 0 8px; font-size: 1.02rem; color: var(--text); }
-  .sub  { margin: 0 0 28px; font-size: .95rem; color: var(--text-muted); }
+  .lead { margin: 0 0 22px; font-size: 1.02rem; color: var(--text); }
 
-  .actions { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  /* ---- Incident / recovery status (GitHub-status style) ---- */
+  .incident { margin: 0 0 24px; text-align: left; }
 
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 48px;
-    padding: 0 26px;
-    border: 0;
-    border-radius: 999px;
-    cursor: pointer;
-    font: inherit;
-    font-weight: 600;
-    font-size: .98rem;
-    text-decoration: none;
-    background: var(--cta-bg);
-    color: var(--cta-text);
-    transition: background-color .15s ease, transform .1s ease;
+  .incident-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 12px 14px;
+    border: 1px solid var(--warn-border);
+    border-radius: 12px;
+    background: var(--warn-bg);
+    transition: background-color .4s ease, border-color .4s ease;
+    animation: rise .45s ease both;
   }
-  .btn:hover { background: var(--cta-bg-hover); }
-  .btn:active { transform: translateY(1px); }
-  .btn svg { width: 18px; height: 18px; }
+  .incident-status.is-resolved { border-color: var(--card-border); background: var(--chip-bg); }
 
-  .retry-note { min-height: 1.2em; font-size: .85rem; color: var(--text-muted); }
+  .live {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: var(--warn);
+    box-shadow: 0 0 0 0 var(--live-ring);
+    animation: live-pulse 2s ease-out infinite;
+  }
+  .live.blip { animation-duration: .5s; }
+  .incident-status.is-resolved .live { background: var(--accent); animation: none; }
+
+  .incident-status-text { display: flex; flex-direction: column; gap: 2px; line-height: 1.4; }
+  .incident-status-text strong { font-size: .95rem; font-weight: 700; color: var(--warn); }
+  .incident-status.is-resolved .incident-status-text strong { color: var(--accent); }
+  .incident-status-text span { font-size: .85rem; color: var(--text-muted); }
+
+  .phases {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    margin: 20px 0 0;
+    padding: 0;
+    animation: rise .45s ease .08s both;
+  }
+  .phase {
+    position: relative;
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    text-align: center;
+  }
+  .phase::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    right: 50%;
+    width: 100%;
+    height: 2px;
+    background: var(--track);
+    transition: background-color .5s ease;
+  }
+  .phase:first-child::before { display: none; }
+  .phase.is-done::before,
+  .phase.is-active::before { background: var(--accent); }
+
+  .node {
+    position: relative;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 2px solid var(--node-idle);
+    transition: background-color .4s ease, border-color .4s ease;
+  }
+  .phase.is-done .node { background: var(--accent); border-color: var(--accent); }
+  .phase.is-done .node::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0;
+    width: 4px;
+    height: 8px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .phase.is-active .node {
+    border-color: var(--accent);
+    animation: node-pulse 1.9s ease-in-out infinite;
+  }
+  .phase.is-active .node::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .phase-name {
+    margin-top: 9px;
+    font-size: clamp(.62rem, 2.7vw, .72rem);
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .phase.is-done .phase-name { color: var(--text); }
+  .phase.is-active .phase-name { color: var(--accent); }
+
+  .recovery-track {
+    margin-top: 16px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--track);
+    overflow: hidden;
+    animation: rise .45s ease .16s both;
+  }
+  .recovery-track span {
+    display: block;
+    width: 40%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: indeterminate 1.7s ease-in-out infinite;
+  }
+  .recovery-track.is-done span {
+    width: 100%;
+    background: var(--accent);
+    animation: none;
+    transform: none;
+  }
+
+  .incident-note {
+    margin: 14px 0 0;
+    font-size: .85rem;
+    color: var(--text-muted);
+    text-align: center;
+    animation: rise .45s ease .24s both;
+  }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes live-pulse {
+    0%   { box-shadow: 0 0 0 0 var(--live-ring); }
+    70%  { box-shadow: 0 0 0 9px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  @keyframes node-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--ok-ring); }
+    50%      { box-shadow: 0 0 0 6px transparent; }
+  }
+  @keyframes indeterminate {
+    0%   { transform: translateX(-130%); }
+    100% { transform: translateX(330%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .incident-status, .phases, .recovery-track, .incident-note,
+    .live, .phase.is-active .node, .recovery-track span { animation: none; }
+    .recovery-track span { width: 55%; }
+  }
 
   .divider { height: 1px; margin: 28px 0; background: var(--card-border); }
 
@@ -200,23 +348,41 @@
       </span>
 
       <h1>We&rsquo;ll be right back</h1>
-      <p class="lead">Our online services are temporarily unavailable.</p>
-      <p class="sub">
-        We&rsquo;re working to restore access and expect to be back shortly.
-        Your policy and cover are safe and completely unaffected.
+      <p class="lead">
+        Our online services are temporarily unavailable. Your policy and cover
+        are safe and completely unaffected.
       </p>
 
-      <div class="actions">
-        <a class="btn" href="/" id="retry">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-            <path d="M21 3v6h-6" />
-          </svg>
-          Try again
-        </a>
-        <p class="retry-note" id="retryNote" aria-live="polite">Checking automatically&hellip;</p>
-      </div>
+      <section class="incident">
+        <div class="incident-status" id="incidentStatus" role="status">
+          <span class="live" id="liveDot" aria-hidden="true"></span>
+          <span class="incident-status-text">
+            <strong id="statusTitle">Recovering</strong>
+            <span id="statusDetail">We&rsquo;ve found the cause and are restoring service gradually.</span>
+          </span>
+        </div>
+
+        <ol class="phases" aria-label="Incident progress">
+          <li class="phase is-done">
+            <span class="node" aria-hidden="true"></span><span class="phase-name">Investigating</span>
+          </li>
+          <li class="phase is-done">
+            <span class="node" aria-hidden="true"></span><span class="phase-name">Identified</span>
+          </li>
+          <li class="phase is-active" id="phaseRecovering">
+            <span class="node" aria-hidden="true"></span><span class="phase-name">Recovering</span>
+          </li>
+          <li class="phase" id="phaseResolved">
+            <span class="node" aria-hidden="true"></span><span class="phase-name">Resolved</span>
+          </li>
+        </ol>
+
+        <div class="recovery-track" id="recoveryTrack" aria-hidden="true"><span></span></div>
+
+        <p class="incident-note" id="recheckNote">
+          This page checks on its own and reloads the moment service is back &mdash; nothing for you to do.
+        </p>
+      </section>
 
       <div class="divider" aria-hidden="true"></div>
 
@@ -274,31 +440,59 @@
         if (el) el.textContent = "Reference " + stamp;
       } catch (e) {}
 
-      // Progressive enhancement: quietly poll the site and reload once it recovers.
+      // Progressive enhancement: quietly poll the site, drive the recovery
+      // status UI, and reload once the origin comes back.
       var INTERVAL = 20; // seconds between checks
-      var note = document.getElementById("retryNote");
+      var note = document.getElementById("recheckNote");
+      var liveDot = document.getElementById("liveDot");
+      var recovered = false;
       var left = INTERVAL;
+      var timer;
 
       function setNote(t) { if (note) note.textContent = t; }
 
+      function blip() {
+        if (!liveDot) return;
+        liveDot.classList.add("blip");
+        setTimeout(function () { liveDot.classList.remove("blip"); }, 600);
+      }
+
+      function markResolved() {
+        recovered = true;
+        clearInterval(timer);
+        var rec = document.getElementById("phaseRecovering");
+        var res = document.getElementById("phaseResolved");
+        var status = document.getElementById("incidentStatus");
+        var track = document.getElementById("recoveryTrack");
+        if (rec) { rec.classList.remove("is-active"); rec.classList.add("is-done"); }
+        if (res) res.classList.add("is-done");
+        if (track) track.classList.add("is-done");
+        if (status) status.classList.add("is-resolved");
+        var title = document.getElementById("statusTitle");
+        var detail = document.getElementById("statusDetail");
+        if (title) title.textContent = "Back online";
+        if (detail) detail.textContent = "All services have been restored.";
+        setNote("Reloading the site…");
+        setTimeout(function () { window.location.reload(); }, 1300);
+      }
+
       function probe() {
-        setNote("Checking…");
+        if (recovered) return;
+        blip();
+        setNote("Checking now…");
         fetch("/?_probe=" + Date.now(), { method: "GET", cache: "no-store", redirect: "follow" })
           .then(function (r) {
-            if (r && r.ok) {
-              setNote("Back online — reloading…");
-              window.location.reload();
-            } else {
-              left = INTERVAL;
-            }
+            if (r && r.ok) markResolved();
+            else left = INTERVAL;
           })
           .catch(function () { left = INTERVAL; });
       }
 
-      setInterval(function () {
+      timer = setInterval(function () {
+        if (recovered) return;
         left -= 1;
         if (left > 0) {
-          setNote("Checking again in " + left + "s…");
+          setNote("Rechecking automatically — next check in " + left + "s");
         } else {
           left = INTERVAL;
           probe();
