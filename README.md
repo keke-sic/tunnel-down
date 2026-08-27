@@ -30,8 +30,16 @@ runs at the edge *instead of* the dead origin. Pick one:
 
 The zone is on Free/Pro/Business (confirmed Aug 2026), so this is the path.
 The Worker fronts the hostnames, forwards to origin, and swaps in `index.html`
-when the origin throws or returns `502/503/504/52x/530` (Error 1033 surfaces to
+only when Cloudflare could not reach the tunnel at all — a thrown connection, or
+a Cloudflare-generated edge error `521/522/523/524/530` (Error 1033 surfaces to
 a Worker subrequest as **530**).
+
+It deliberately does **not** trigger on `502/503/504`: the SvelteKit origin
+serves its own real `503` for the portal's scheduled maintenance window
+(`portal/+layout.server.ts` → `error(503, 'maintenance')`, nightly 17:00–08:00 +
+weekends) and its own 5xx error pages — those pass straight through, so the
+Worker can't override the portal's own "reopens at 8am" page. See the
+`ORIGIN_DOWN` set in `worker.js`.
 
 `index.html` is pulled into the Worker bundle by `import MAINTENANCE_HTML from
 "./index.html"` — Wrangler treats `.html` as a Text module by default, no
