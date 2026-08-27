@@ -26,27 +26,59 @@ is exactly the tunnel-down case.
 So unless the zone is Enterprise, the page has to be served by something that
 runs at the edge *instead of* the dead origin. Pick one:
 
-### Option A — Worker failover (recommended, works on every plan)
+### Option A — Worker failover (recommended, works on every plan) — CHOSEN
 
-Fronts the hostnames, forwards to origin, and swaps in `index.html` when the
-origin throws or returns `502/503/504/52x/530`.
+The zone is on Free/Pro/Business (confirmed Aug 2026), so this is the path.
+The Worker fronts the hostnames, forwards to origin, and swaps in `index.html`
+when the origin throws or returns `502/503/504/52x/530` (Error 1033 surfaces to
+a Worker subrequest as **530**).
+
+`index.html` is pulled into the Worker bundle by `import MAINTENANCE_HTML from
+"./index.html"` — Wrangler treats `.html` as a Text module by default, no
+config needed. Build verified on Wrangler 4.127 (~52 KiB, ~20 KiB gzipped).
+
+#### Deploy
 
 ```bash
-cd "custom Error"
-npx wrangler login          # once, against the account that owns siclife.com.gh
+cd "/home/kekeli/Desktop/custom Error"
+
+# 1. Authenticate against the account that owns siclife.com.gh.
+npx wrangler login
+#    Headless box (no browser)? Instead:
+#      export CLOUDFLARE_API_TOKEN=...        # token needs, on the siclife.com.gh zone:
+#      #   Account · Workers Scripts · Edit
+#      #   Zone    · Workers Routes  · Edit
+
+# 2. Make sure the `routes` in wrangler.toml match the tunnel's real hostnames.
+
+# 3. Build check — no auth needed, just confirms the bundle.
+npx wrangler deploy --dry-run          # expect: Total Upload: ~52 KiB
+
+# 4. Ship it. Uploads the Worker + binds the routes, global in a few seconds.
 npx wrangler deploy
 ```
 
-Edit the `routes` list in `wrangler.toml` first so it matches exactly the
-hostnames the tunnel serves.
+#### Verify
 
-Notes:
+| Check | How | Expect |
+| --- | --- | --- |
+| Transparent when healthy | Load `https://self-service.siclife.com.gh` | Normal site, unchanged |
+| Failover fires | Stop `cloudflared` ~30s (try `preview.` first) | Branded page, not CF's 1033 |
+| Auto-recovery | Restart `cloudflared` | Page reloads to the real site within ~20s |
 
-- Workers Free = 100k requests/day across all routes. If staff + self-service
-  traffic is higher, add the Workers Paid plan ($5/mo → 10M/month).
-- The Worker is on the request path at all times but does nothing except an
-  extra `fetch()` passthrough while the origin is healthy (sub-millisecond CPU).
-- Recovery is automatic: the page's poller sees `/` return 200 and reloads.
+#### Operate
+
+- **Update the page:** edit `index.html`, re-run `npx wrangler deploy`. If the
+  logo changes, re-inline it — it's a base64 `data:` URI in the `<img src>`
+  (`base64 -w0 logo.svg`, prefix `data:image/svg+xml;base64,`).
+- **Roll back:** `npx wrangler rollback`.
+- **Remove entirely:** `npx wrangler delete` — drops the Worker and its routes;
+  traffic goes straight to origin again, exactly like before deploy.
+- **Watch usage:** Cloudflare dash → Workers & Pages → `siclife-origin-failover`
+  → Metrics. Free tier ceiling is 100k requests/day across all routes combined;
+  Workers Paid ($5/mo) lifts it to 10M/month.
+- The Worker is on the request path at all times but only does an extra
+  `fetch()` passthrough while origin is healthy (sub-millisecond CPU).
 
 ### Option B — Load Balancer failover (no Worker on the hot path)
 
@@ -91,10 +123,17 @@ The failover page is the safety net, not the fix.
 
 ---
 
-## Testing
+## Local testing (before deploy)
 
-- **Look:** open `index.html` directly in a browser; toggle OS dark mode.
-- **Worker logic:** `npx wrangler dev` then point a route's origin at a dead
-  port, or temporarily add `return maintenancePage();` at the top of `fetch`.
-- **Recovery poll:** serve the folder (`npx serve`), load the page, then bring
-  a server up on `/` — the page should reload itself within ~20s.
+- **Look:** open `index.html` directly in a browser; toggle OS dark mode. Or
+  screenshot both themes with Playwright (`colorScheme: 'light' | 'dark'`).
+- **Worker logic:** temporarily add `return maintenancePage();` at the top of
+  `fetch()` in `worker.js`, run `npx wrangler dev`, hit `http://localhost:8787`.
+- **Recovery poll:** `npx serve .` (or any static server), open the page, then
+  start something answering 200 on `/` — the page should reload within ~20s.
+
+## History
+
+- **2026-08-27** — Built. `index.html` content (logo, contacts, wording) mirrors
+  the `siclife-ui` self-service portal at that date. Committed to `main`
+  (`d3e0955`). Not yet deployed to Cloudflare — handed over for manual wiring.
