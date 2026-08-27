@@ -1,0 +1,28 @@
+# SIC Life origin-down failover Worker.
+# Deploy with:  npx wrangler deploy
+#
+# Requires a Cloudflare account with the zone siclife.com.gh. Workers Free tier
+# covers 100k requests/day; if staff + self-service traffic exceeds that, the
+# Workers Paid plan ($5/mo) lifts it to 10M/month. See README.md for the
+# no-Worker alternatives (Enterprise Custom Pages, Load Balancer failover).
+
+name = "siclife-origin-failover"
+main = "worker.js"
+compatibility_date = "2026-08-27"
+
+# `import MAINTENANCE_HTML from "./index.html"` works out of the box —
+# Wrangler treats .html as a Text module by default.
+
+# Run the Worker on the browser-facing UI hostnames only. Adjust to match what
+# the tunnel actually serves.
+#
+# aqua.siclife.com.gh is deliberately excluded — it serves the JSON API, and API
+# clients need a 503 JSON body, not an HTML page. If you want a branded response
+# there too, add a route and branch on the Accept header in worker.js.
+routes = [
+  { pattern = "self-service.siclife.com.gh/*", zone_name = "siclife.com.gh" },
+  { pattern = "agent.siclife.com.gh/*",        zone_name = "siclife.com.gh" },
+  { pattern = "staff.siclife.com.gh/*",        zone_name = "siclife.com.gh" },
+  { pattern = "it.siclife.com.gh/*",           zone_name = "siclife.com.gh" },
+  { pattern = "preview.siclife.com.gh/*",      zone_name = "siclife.com.gh" },
+]
