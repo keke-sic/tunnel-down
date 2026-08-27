@@ -425,7 +425,7 @@
   </main>
 
   <footer>
-    <div>SIC Life Company Limited &middot; Absolute peace of mind</div>
+    <div>&copy; <span id="year">2026</span> SIC LIFE INSURANCE LTD. &middot; Absolute peace of mind</div>
     <div class="ref" id="ref"></div>
   </footer>
 
@@ -438,6 +438,8 @@
         var stamp = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes());
         var el = document.getElementById("ref");
         if (el) el.textContent = "Reference " + stamp;
+        var yr = document.getElementById("year");
+        if (yr) yr.textContent = d.getFullYear();
       } catch (e) {}
 
       // Progressive enhancement: quietly poll the site, drive the recovery
